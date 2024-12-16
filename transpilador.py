@@ -1,6 +1,6 @@
 import re
 
-# Lexer
+
 class Lexer:
     def __init__(self, source_code):
         self.tokens = []
@@ -10,7 +10,7 @@ class Lexer:
             ("KEYWORD", r'\b(if|else|elif|while|def|return|and|or)\b'),
             ("IDENTIFIER", r'\b[a-zA-Z_][a-zA-Z0-9_]*\b'),
             ("NUMBER", r'\b\d+\b'),
-            ("OPERATOR", r'[+\-/*=<>!]+'),  # Incluído suporte para ==, !=, etc.
+            ("OPERATOR", r'[+\-/*=<>!]+'),  
             ("DELIMITER", r'[():,;]'),
             ("WHITESPACE", r'\s+'),
         ]
@@ -70,98 +70,97 @@ class Parser:
             raise ValueError(f"Declaração inválida: {token}")
 
     def declaracao_funcao(self):
-        self.eat("KEYWORD")  # "def"
+        self.eat("KEYWORD")  
         nome_funcao = self.current_token()[1]
-        self.eat("IDENTIFIER")  # Nome da função
-        self.eat("DELIMITER")  # "("
+        self.eat("IDENTIFIER")  
+        self.eat("DELIMITER")  
         parametros = self.parametros()
-        self.eat("DELIMITER")  # ")"
-        self.eat("DELIMITER")  # ":"
+        self.eat("DELIMITER")  
+        self.eat("DELIMITER")  
         corpo = self.bloco()
         return Funcao(nome_funcao, parametros, corpo)
     
     def declaracao_return(self):
-        self.eat("KEYWORD")  # "return"
-        expressao = self.expressao()  # Pega a expressão após 'return'
+        self.eat("KEYWORD") 
+        expressao = self.expressao()  
         return Return(expressao)
 
     def parametros(self):
         parametros = []
         while self.current_token() and self.current_token()[0] != "DELIMITER" and self.current_token()[1] != ")":
-            if self.current_token()[0] == "IDENTIFIER":  # Identificador de parâmetro
+            if self.current_token()[0] == "IDENTIFIER":  
                 parametros.append(self.current_token()[1])
                 self.eat("IDENTIFIER")
-            elif self.current_token()[0] == "NUMBER":  # Caso em que há um número como parâmetro
+            elif self.current_token()[0] == "NUMBER":  
                 parametros.append(self.current_token()[1])
                 self.eat("NUMBER")
             
-            if self.current_token() and self.current_token()[1] == ",":  # Se houver vírgula, consome e continua
+            if self.current_token() and self.current_token()[1] == ",":  
                 self.eat("DELIMITER")
         
         return parametros
 
     def declaracao_if(self):
-        self.eat("KEYWORD")  # "if"
+        self.eat("KEYWORD")  
         condicao = self.condicao()
-        self.eat("DELIMITER")  # ":"
+        self.eat("DELIMITER") 
         bloco = self.bloco()
 
-        # Agora, o 'elif' será tratado
+       
         elifos = []
         while self.current_token() and self.current_token()[0] == "KEYWORD" and self.current_token()[1] == "elif":
-            self.eat("KEYWORD")  # "elif"
+            self.eat("KEYWORD") 
             condicao_elif = self.condicao()
-            self.eat("DELIMITER")  # ":"
+            self.eat("DELIMITER")  
             bloco_elif = self.bloco()
             elifos.append({"condicao": condicao_elif, "bloco": bloco_elif})
 
-        # Se houver um 'else', ele será tratado
+        
         else_bloco = None
         if self.current_token() and self.current_token()[0] == "KEYWORD" and self.current_token()[1] == "else":
-            self.eat("KEYWORD")  # "else"
-            self.eat("DELIMITER")  # ":"
+            self.eat("KEYWORD")  
+            self.eat("DELIMITER") 
             else_bloco = self.bloco()
 
-        # Retorna a classe IfElse
+       
         return IfElse(condicao, bloco, elifos, else_bloco)
 
 
     def declaracao_while(self):
-        self.eat("KEYWORD")  # "while"
+        self.eat("KEYWORD")  
         condicao = self.condicao()
-        self.eat("DELIMITER")  # ":"
+        self.eat("DELIMITER")
         bloco = self.bloco()
         
-        # Retorna a classe While
+       
         return While(condicao, bloco)
 
 
     def atribuicao(self):
-        identificador = self.current_token()[1]  # Pega o identificador
-        self.eat("IDENTIFIER")  # Identificador
+        identificador = self.current_token()[1] 
+        self.eat("IDENTIFIER") 
         if self.current_token() and self.current_token()[0] == "DELIMITER" and self.current_token()[1] == "(":
-            # Caso a próxima parte seja uma chamada de função
-            self.eat("DELIMITER")  # "("
-            parametros = self.parametros()  # Chamada de função com parâmetros
-            self.eat("DELIMITER")  # ")"
+           
+            self.eat("DELIMITER")  
+            parametros = self.parametros()  
+            self.eat("DELIMITER")  
             return ChamadaFuncao(identificador, parametros)
-        self.eat("OPERATOR")  # "="
+        self.eat("OPERATOR")  
         expressao = self.expressao()
         return Atribuicao(identificador, expressao)
 
     def condicao(self):
         expressao_esquerda = self.expressao()
 
-        # Enquanto houver operadores lógicos ou comparativos válidos
         while self.current_token() and (
             (self.current_token()[0] == "OPERATOR" and self.current_token()[1] in ["<", ">", "==", "<=", ">=", "!="]) or
             (self.current_token()[0] == "KEYWORD" and self.current_token()[1] in ["and", "or"])
         ):
             operador = self.current_token()[1]
             if self.current_token()[0] == "OPERATOR":
-                self.eat("OPERATOR")  # Consumir operador de comparação
+                self.eat("OPERATOR")  
             elif self.current_token()[0] == "KEYWORD":
-                self.eat("KEYWORD")  # Consumir 'and' ou 'or'
+                self.eat("KEYWORD")  
 
             expressao_direita = self.expressao()
             expressao_esquerda = Termo([expressao_esquerda, expressao_direita], operador)
@@ -198,20 +197,20 @@ class Parser:
         token = self.current_token()
         if token and token[0] == "NUMBER":
             self.eat("NUMBER")
-            return Fator(int(token[1]))  # Retorna número
+            return Fator(int(token[1]))  
         elif token and token[0] == "IDENTIFIER":
             self.eat("IDENTIFIER")
-            # Verificar se o próximo token é um parêntese, indicando uma chamada de função
+            
             if self.current_token() and self.current_token()[0] == "DELIMITER" and self.current_token()[1] == "(":
-                self.eat("DELIMITER")  # Consumir '('
+                self.eat("DELIMITER")  
                 parametros = self.parametros()
-                self.eat("DELIMITER")  # Consumir ')'
-                return FuncaoChamada(token[1], parametros)  # Criar a chamada de função
-            return Fator(token[1])  # Retorna identificador
+                self.eat("DELIMITER")  
+                return FuncaoChamada(token[1], parametros) 
+            return Fator(token[1]) 
         elif token and token[0] == "DELIMITER" and token[1] == "(":
-            self.eat("DELIMITER")  # "("
+            self.eat("DELIMITER") 
             expressao = self.expressao()
-            self.eat("DELIMITER")  # ")"
+            self.eat("DELIMITER")  
             return expressao
         else:
             raise ValueError(f"Fator inválido: {token}")
@@ -238,7 +237,7 @@ class While:
 
 class Programa:
     def __init__(self, declaracoes):
-        self.declaracoes = declaracoes  # Lista de declarações
+        self.declaracoes = declaracoes
 
 class Declaracao:
     pass
@@ -254,19 +253,18 @@ class Condicao:
 
 class Bloco:
     def __init__(self, comandos):
-        self.comandos = comandos  # Lista de comandos dentro do bloco
-
+        self.comandos = comandos 
 class Expressao:
     pass
 
 class Termo(Expressao):
     def __init__(self, fatores, operador=None):
-        self.fatores = fatores  # Lista de fatores
-        self.operador = operador  # Pode ser '+' ou '-', caso exista
+        self.fatores = fatores 
+        self.operador = operador  
 
 class Fator(Expressao):
     def __init__(self, valor):
-        self.valor = valor  # Pode ser número ou identificador
+        self.valor = valor
 
 class Funcao(Declaracao):
     def __init__(self, nome, parametros, corpo):
@@ -310,13 +308,13 @@ class GeradorCodigo:
             return self.gerar_return(declaracao)
         elif isinstance(declaracao, ChamadaFuncao):
             return self.gerar_chamada_funcao(declaracao)
-        elif isinstance(declaracao, Bloco):  # Adicionar o tratamento para Bloco
+        elif isinstance(declaracao, Bloco): 
             return self.gerar_bloco(declaracao)
-        elif isinstance(declaracao, Termo):  # Novo tratamento para Termo
+        elif isinstance(declaracao, Termo):
             return self.gerar_termo(declaracao)
-        elif hasattr(declaracao, 'condicao') and hasattr(declaracao, 'bloco_if'):  # Checagem genérica para IfElse
+        elif hasattr(declaracao, 'condicao') and hasattr(declaracao, 'bloco_if'): 
             return self.gerar_if_else(declaracao)
-        elif hasattr(declaracao, 'condicao') and hasattr(declaracao, 'bloco'):  # Checagem genérica para While
+        elif hasattr(declaracao, 'condicao') and hasattr(declaracao, 'bloco'): 
             return self.gerar_while(declaracao)
         else:
             raise ValueError(f"Tipo de declaração desconhecido: {type(declaracao)}")
@@ -324,19 +322,18 @@ class GeradorCodigo:
     def gerar_termo(self, termo):
         fatores_codigo = [self.gerar_fator(fator) for fator in termo.fatores]
         if termo.operador:
-            return f"({fatores_codigo[0]} {termo.operador} {fatores_codigo[1]})"  # Formato básico para termos com operadores
-        return fatores_codigo[0]
+            return f"({fatores_codigo[0]} {termo.operador} {fatores_codigo[1]})" 
 
     def gerar_fator(self, fator):
         if isinstance(fator, Fator):
-            if isinstance(fator.valor, int):  # Se for número
+            if isinstance(fator.valor, int):
                 return str(fator.valor)
-            else:  # Se for identificador
+            else: 
                 return fator.valor
-        elif isinstance(fator, FuncaoChamada):  # Se for uma chamada de função
+        elif isinstance(fator, FuncaoChamada):
             parametros = ", ".join(fator.parametros)
             return f"{fator.nome}({parametros})"
-        elif isinstance(fator, Termo):  # Se for do tipo Termo, chame gerar_termo para lidar com ele
+        elif isinstance(fator, Termo):
             return self.gerar_termo(fator)
         else:
             raise ValueError(f"Tipo de fator desconhecido: {type(fator)}")
@@ -345,7 +342,6 @@ class GeradorCodigo:
         return "{\n" + "\n".join([self.gerar_declaracao(comando) for comando in bloco.comandos]) + "\n}"
 
     def gerar_dicionario(self, dicionario):
-        # Converte o dicionário para um formato JavaScript
         return "{ " + ", ".join([f"{k}: {v}" for k, v in dicionario.items()]) + " }"
 
     def gerar_funcao(self, funcao):
@@ -363,7 +359,6 @@ class GeradorCodigo:
         parametros = ", ".join([self.gerar_declaracao(param) for param in chamada.parametros])
         return f"{chamada.nome_funcao}({parametros});"
 
-    # Função para gerar estrutura de controle "if"
     def gerar_if_else(self, if_else):
         condicao = self.gerar_declaracao(if_else.condicao)
         bloco_if = self.gerar_bloco(if_else.bloco_if)
@@ -374,14 +369,13 @@ class GeradorCodigo:
         bloco_else = f" else {self.gerar_bloco(if_else.bloco_else)}" if if_else.bloco_else else ""
         return f"if ({condicao}) {bloco_if}{else_if}{bloco_else}"
 
-    # Função para gerar estrutura de controle "while"
     def gerar_while(self, while_stmt):
         condicao = self.gerar_declaracao(while_stmt.condicao)
         bloco_while = self.gerar_bloco(while_stmt.bloco)
         return f"while ({condicao}) {bloco_while}"
 
 
-
+#Basta escrever o codigo aqui
 source_code = """
 def funcao(x, y):
     if x >= y and y >= 10:
@@ -393,18 +387,16 @@ while y == 10:
 funcao(10, numero)
 """
 
-# Passo 1: Tokenizar o código
+
 lexer = Lexer(source_code)
 tokens = lexer.tokenize()
 print("Tokens:", tokens)
 
-# Passo 2: Analisar sintaticamente os tokens
+
+print("\n--------------------\n")
 parser = Parser(tokens)
 ast = parser.parse()
-print("Árvore Sintática:\n", ast)
 
-# Supondo que a variável `programa` seja o resultado do parse
-# gerando o código JS correspondente
 gerador = GeradorCodigo(ast)
 codigo_js = gerador.gerar_codigo_js()
 print(codigo_js)
